@@ -1,0 +1,54 @@
+{
+    "name": "conedevelopment/bazar-stripe",
+    "description": "Stripe payment integration for Bazar.",
+    "license": "MIT",
+    "type": "project",
+    "keywords": [
+        "laravel",
+        "root",
+        "bazar",
+        "stripe"
+    ],
+    "authors": [
+        {
+            "name": "Cone Development",
+            "email": "hello@conedevelopment.com"
+        }
+    ],
+    "require": {
+        "php": "^8.1 || ^8.2",
+        "conedevelopment/bazar": "@dev"
+    },
+    "require-dev": {
+        "fakerphp/faker": "^1.9.1",
+        "laravel/laravel": "^10.16",
+        "laravel/pint": "^1.6",
+        "mockery/mockery": "^1.4.4",
+        "nunomaduro/larastan": "^2.1.6",
+        "phpunit/phpunit": "^10.2.5"
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "autoload": {
+        "psr-4": {
+            "Cone\\Bazar\\Stripe\\": "src/",
+            "Cone\\Bazar\\Stripe\\Database\\Seeders\\": "database/seeders/",
+            "Cone\\Bazar\\Stripe\\Database\\Factories\\": "database/factories/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Cone\\Bazar\\Stripe\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-master": "v1-dev"
+        },
+        "laravel": {
+            "providers": [
+                "Cone\\Bazar\\Stripe\\StripeServiceProvider"
+            ]
+        }
+    }
+}

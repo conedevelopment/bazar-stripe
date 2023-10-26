@@ -1,0 +1,19 @@
+/.babelrc export-ignore
+/.editorconfig export-ignore
+/.eslintrc.js export-ignore
+/.gitattributes export-ignore
+/.github export-ignore
+/.gitignore export-ignore
+/.vscode export-ignore
+/.stylelintrc.json export-ignore
+/.typos.toml export-ignore
+/composer.lock export-ignore linguist-generated
+/jest.config.js export-ignore
+/js-tests export-ignore
+/phpstan.neon.dist export-ignore
+/phpunit.xml.dist export-ignore
+/public/build/assets/ linguist-generated
+/tests export-ignore
+/yarn.lock export-ignore linguist-generated
+/vite.config.js export-ignore
+/webpack.mix.js export-ignore

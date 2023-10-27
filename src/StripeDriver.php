@@ -8,7 +8,10 @@ use Cone\Bazar\Interfaces\LineItem;
 use Cone\Bazar\Models\Order;
 use Cone\Bazar\Models\Transaction;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\URL;
+use Stripe\Checkout\Session;
 use Stripe\StripeClient;
+use Throwable;
 
 class StripeDriver extends Driver
 {
@@ -28,7 +31,7 @@ class StripeDriver extends Driver
     }
 
     /**
-     * Process the payment.
+     * {@inheritdoc}
      */
     public function pay(Order $order, float $amount = null): Transaction
     {
@@ -36,24 +39,23 @@ class StripeDriver extends Driver
     }
 
     /**
-     * Process the refund.
+     * {@inheritdoc}
      */
     public function refund(Order $order, float $amount = null): Transaction
     {
         return $order->refund($amount, 'stripe', []);
     }
 
-
     /**
-     * {@inheritdoc}
+     * Create a new Stripe session.
      */
-    public function checkout(Request $request, Order $order): Response
+    protected function createSession(Order $order): Session
     {
-        $session = $this->client->checkout->sessions->create([
+        return $this->client->checkout->sessions->create([
             'line_items' => $order->lineItems->map(static function (LineItem $item) use ($order): array {
                 return [
                     'price_data' => [
-                        'currency' => $order->getCurrency(),
+                        'currency' => strtolower($order->getCurrency()),
                         'product_data' => [
                             'name' => $item->getName(),
                         ],
@@ -61,12 +63,24 @@ class StripeDriver extends Driver
                     ],
                     'quantity' => $item->getQuantity(),
                 ];
-            }),
+            })->toArray(),
             'mode' => 'payment',
-            'success_url' => $this->config['success_url'],
-            'cancel_url' => $this->config['cancel_url'],
+            'success_url' => URL::to($this->config['success_url']),
+            'cancel_url' => URL::to($this->config['cancel_url']),
         ]);
+    }
 
-        return parent::checkout($request, $order)->url($session->url);
+    /**
+     * {@inheritdoc}
+     */
+    public function checkout(Request $request, Order $order): Response
+    {
+        try {
+            $url = $this->createSession($order)->url;
+        } catch (Throwable $exception) {
+            $url = URL::to($this->config['cancel_url']);
+        }
+
+        return parent::checkout($request, $order)->url($url);
     }
 }

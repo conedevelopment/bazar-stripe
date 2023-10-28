@@ -52,6 +52,7 @@ class StripeDriver extends Driver
     protected function createSession(Order $order): Session
     {
         return $this->client->checkout->sessions->create([
+            'client_reference_id' => $order->uuid,
             'line_items' => $order->lineItems->map(static function (LineItem $item) use ($order): array {
                 return [
                     'price_data' => [
@@ -65,9 +66,17 @@ class StripeDriver extends Driver
                 ];
             })->toArray(),
             'mode' => 'payment',
-            'success_url' => URL::to($this->config['success_url']),
-            'cancel_url' => URL::to($this->config['cancel_url']),
+            'success_url' => $this->redirectUrl($order, ['status' => 'success']),
+            'cancel_url' => $this->redirectUrl($order, ['status' => 'cancelled']),
         ]);
+    }
+
+    /**
+     * Create a new method.
+     */
+    protected function redirectUrl(Order $order, array $query = []): string
+    {
+        return URL::signedRoute('bazar.stripe.payment', array_merge(['order' => $order->getKey()], $query));
     }
 
     /**
@@ -78,7 +87,7 @@ class StripeDriver extends Driver
         try {
             $url = $this->createSession($order)->url;
         } catch (Throwable $exception) {
-            $url = URL::to($this->config['cancel_url']);
+            $url = $this->redirectUrl($order, ['status' => 'failed']);
         }
 
         return parent::checkout($request, $order)->url($url);

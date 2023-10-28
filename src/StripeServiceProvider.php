@@ -2,6 +2,7 @@
 
 namespace Cone\Bazar\Stripe;
 
+use Cone\Bazar\Stripe\Http\Controllers\PaymentController;
 use Cone\Bazar\Stripe\StripeDriver;
 use Cone\Bazar\Support\Facades\Gateway;
 use Illuminate\Contracts\Foundation\Application;
@@ -29,9 +30,16 @@ class StripeServiceProvider extends ServiceProvider
     public function boot(): void
     {
         if ($this->app->runningInConsole()) {
-            $this->publishes([
-                __DIR__.'/../config/bazar_stripe.php' => $this->app->configPath('bazar_stripe.php'),
-            ], 'bazar-stripe-config');
+            $this->publishes(
+                [__DIR__.'/../config/bazar_stripe.php' => $this->app->configPath('bazar_stripe.php')],
+                'bazar-stripe-config'
+            );
+        }
+
+        if (! $this->app->routesAreCached()) {
+            $this->app['router']
+                ->get('/bazar/stripe/payment', PaymentController::class)
+                ->name('bazar.stripe.payment');
         }
     }
 }

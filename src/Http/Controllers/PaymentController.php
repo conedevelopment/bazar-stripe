@@ -12,21 +12,21 @@ use Illuminate\Support\Facades\Redirect;
 class PaymentController extends Controller
 {
     /**
-     * Create a new controller instance.
-     */
-    public function __construct()
-    {
-        $this->middleware('signed');
-    }
-
-    /**
      * Handle the incoming webhook request.
      */
     public function __invoke(Request $request): RedirectResponse
     {
-        $order = Order::query()->findOrFail($request->input('order'));
-
         $status = $request->input('status');
+
+        $session = Gateway::driver('stripe')->client->checkout->sessions->retrieve(
+            $request->input('session_id')
+        );
+
+        $order = Order::query()->where('uuid', $session->client_reference_id)->firstOrFail();
+
+        if ($status === 'success') {
+            Gateway::driver('stripe')->pay($order, null, ['key' => $session->payment_intent]);
+        }
 
         return Redirect::to('/')->with('status', $status);
     }

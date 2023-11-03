@@ -3,7 +3,6 @@
 namespace Cone\Bazar\Stripe;
 
 use Cone\Bazar\Stripe\Http\Controllers\PaymentController;
-use Cone\Bazar\Stripe\StripeDriver;
 use Cone\Bazar\Support\Facades\Gateway;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\ServiceProvider;

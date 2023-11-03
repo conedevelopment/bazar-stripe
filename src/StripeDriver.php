@@ -18,7 +18,7 @@ class StripeDriver extends Driver
     /**
      * The Stripe client instance.
      */
-    protected StripeClient $client;
+    public readonly StripeClient $client;
 
     /**
      * Create a new driver instance.
@@ -33,17 +33,25 @@ class StripeDriver extends Driver
     /**
      * {@inheritdoc}
      */
-    public function pay(Order $order, float $amount = null): Transaction
+    public function pay(Order $order, float $amount = null, array $attrributes = []): Transaction
     {
-        return $order->pay($amount, 'stripe', []);
+        return $order->pay($amount, 'stripe', $attrributes);
     }
 
     /**
      * {@inheritdoc}
      */
-    public function refund(Order $order, float $amount = null): Transaction
+    public function refund(Order $order, float $amount = null, array $attrributes = []): Transaction
     {
-        return $order->refund($amount, 'stripe', []);
+        return $order->refund($amount, 'stripe', $attrributes);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getTransactionUrl(Transaction $transaction): ?string
+    {
+        return sprintf('https://dashboard.stripe.com/%spayments/%s', $this->config['test_mode'] ? 'test/' : '', $transaction->key);
     }
 
     /**
@@ -53,30 +61,30 @@ class StripeDriver extends Driver
     {
         return $this->client->checkout->sessions->create([
             'client_reference_id' => $order->uuid,
-            'line_items' => $order->lineItems->map(static function (LineItem $item) use ($order): array {
+            'customer_email' => $order->user->email,
+            'line_items' => $order->items->map(static function (LineItem $item) use ($order): array {
                 return [
                     'price_data' => [
                         'currency' => strtolower($order->getCurrency()),
-                        'product_data' => [
-                            'name' => $item->getName(),
-                        ],
+                        'product_data' => ['name' => $item->getName()],
                         'unit_amount' => $item->getPrice() * 100,
                     ],
                     'quantity' => $item->getQuantity(),
                 ];
             })->toArray(),
+            'billing_address_collection' => 'required',
             'mode' => 'payment',
-            'success_url' => $this->redirectUrl($order, ['status' => 'success']),
-            'cancel_url' => $this->redirectUrl($order, ['status' => 'cancelled']),
+            'success_url' => $this->redirectUrl('success'),
+            'cancel_url' => $this->redirectUrl('cancelled'),
         ]);
     }
 
     /**
-     * Create a new method.
+     * Get the redirect URL.
      */
-    protected function redirectUrl(Order $order, array $query = []): string
+    protected function redirectUrl(string $status): string
     {
-        return URL::signedRoute('bazar.stripe.payment', array_merge(['order' => $order->getKey()], $query));
+        return URL::route('bazar.stripe.payment', ['status' => $status]).'&session_id={CHECKOUT_SESSION_ID}';
     }
 
     /**
@@ -87,7 +95,7 @@ class StripeDriver extends Driver
         try {
             $url = $this->createSession($order)->url;
         } catch (Throwable $exception) {
-            $url = $this->redirectUrl($order, ['status' => 'failed']);
+            $url = $this->redirectUrl('failed');
         }
 
         return parent::checkout($request, $order)->url($url);

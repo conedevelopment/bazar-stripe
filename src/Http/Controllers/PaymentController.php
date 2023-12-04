@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Redirect;
 class PaymentController extends Controller
 {
     /**
-     * Handle the incoming webhook request.
+     * Handle the incoming payment request.
      */
     public function __invoke(Request $request): RedirectResponse
     {

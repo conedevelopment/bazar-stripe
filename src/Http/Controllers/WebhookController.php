@@ -7,6 +7,8 @@ use Cone\Bazar\Support\Facades\Gateway;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
+use Stripe\Event;
+use Stripe\PaymentIntent;
 
 class WebhookController extends Controller
 {
@@ -17,12 +19,17 @@ class WebhookController extends Controller
     {
         $data = json_decode($request->getContent(), true);
 
+        $event = Event::constructFrom($data);
+
         $session = Gateway::driver('stripe')->client->checkout->sessions->retrieve(
             $data['session_id']
         );
 
-        // Handle event
+        $response = match ($event->type) {
+            'payment_intent.succeeded' => '', // $event->data->object PaymentIntent
+            default => '',
+        };
 
-        return Response('', Response::HTTP_NO_CONTENT);
+        return Response($response, Response::HTTP_NO_CONTENT);
     }
 }

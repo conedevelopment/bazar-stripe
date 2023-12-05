@@ -2,13 +2,12 @@
 
 namespace Cone\Bazar\Stripe\Http\Controllers;
 
-use Cone\Bazar\Models\Order;
-use Cone\Bazar\Support\Facades\Gateway;
+use Cone\Bazar\Stripe\Events\WebhookInvoked;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
-use Stripe\Event;
-use Stripe\PaymentIntent;
+use Illuminate\Support\Facades\Config;
+use Stripe\Webhook;
 
 class WebhookController extends Controller
 {
@@ -17,19 +16,14 @@ class WebhookController extends Controller
      */
     public function __invoke(Request $request): Response
     {
-        $data = json_decode($request->getContent(), true);
-
-        $event = Event::constructFrom($data);
-
-        $session = Gateway::driver('stripe')->client->checkout->sessions->retrieve(
-            $data['session_id']
+        $event = Webhook::constructEvent(
+            $request->getContent(),
+            $request->server('HTTP_STRIPE_SIGNATURE'),
+            Config::get('bazar_stripe.secret')
         );
 
-        $response = match ($event->type) {
-            'payment_intent.succeeded' => '', // $event->data->object PaymentIntent
-            default => '',
-        };
+        WebhookInvoked::dispatch($event);
 
-        return Response($response, Response::HTTP_NO_CONTENT);
+        return Response('', Response::HTTP_NO_CONTENT);
     }
 }

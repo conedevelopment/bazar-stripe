@@ -3,6 +3,7 @@
 namespace Cone\Bazar\Stripe;
 
 use Cone\Bazar\Stripe\Http\Controllers\PaymentController;
+use Cone\Bazar\Stripe\Http\Controllers\WebhookController;
 use Cone\Bazar\Support\Facades\Gateway;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
@@ -39,6 +40,10 @@ class StripeServiceProvider extends ServiceProvider
             $this->app['router']
                 ->get('/bazar/stripe/payment', PaymentController::class)
                 ->name('bazar.stripe.payment');
+
+            $this->app['router']
+                ->post('/bazar/stripe/webhook', WebhookController::class)
+                ->name('bazar.stripe.webhook');
         }
     }
 }

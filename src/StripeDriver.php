@@ -2,6 +2,7 @@
 
 namespace Cone\Bazar\Stripe;
 
+use Closure;
 use Cone\Bazar\Gateway\Driver;
 use Cone\Bazar\Gateway\Response;
 use Cone\Bazar\Interfaces\LineItem;
@@ -21,6 +22,11 @@ class StripeDriver extends Driver
     public readonly StripeClient $client;
 
     /**
+     * The payment redirect path callback.
+     */
+    protected static ?Closure $redirectAfterPayment = null;
+
+    /**
      * Create a new driver instance.
      */
     public function __construct(array $config = [])
@@ -28,6 +34,29 @@ class StripeDriver extends Driver
         parent::__construct($config);
 
         $this->client = new StripeClient($config['api_key']);
+    }
+
+    /**
+     * Set the payment redirect path resolver.
+     */
+    public static function redirectAfterPayment(Closure $callback): void
+    {
+        static::$redirectAfterPayment = $callback;
+    }
+
+    /**
+     * Resolve the redirect path after payment.
+     */
+    public function resolveRedirectAfterPayment(Order $order, string $staus, Transaction $transaction = null): string
+    {
+        if (! is_null(static::$redirectAfterPayment)) {
+            return call_user_func_array(static::$redirectAfterPayment, [$order, $staus, $transaction]);
+        }
+
+        return match ($staus) {
+            'success' => $this->config['success_url'] ?? '/',
+            default => $this->config['cancel_url'] ?? '/',
+        };
     }
 
     /**

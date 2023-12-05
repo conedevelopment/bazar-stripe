@@ -18,16 +18,22 @@ class PaymentController extends Controller
     {
         $status = $request->input('status');
 
-        $session = Gateway::driver('stripe')->client->checkout->sessions->retrieve(
+        $stripe = Gateway::driver('stripe');
+
+        $transaction = null;
+
+        $session = $stripe->client->checkout->sessions->retrieve(
             $request->input('session_id')
         );
 
         $order = Order::query()->where('uuid', $session->client_reference_id)->firstOrFail();
 
         if ($status === 'success') {
-            Gateway::driver('stripe')->pay($order, null, ['key' => $session->payment_intent]);
+            $transaction = $stripe->pay($order, null, ['key' => $session->payment_intent]);
         }
 
-        return Redirect::to('/')->with('status', $status);
+        return Redirect::to(
+            $stripe->resolveRedirectAfterPayment($order, $status, $transaction)
+        );
     }
 }

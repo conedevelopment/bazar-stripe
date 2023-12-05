@@ -33,7 +33,7 @@ class PaymentController extends Controller
         }
 
         return Redirect::to(
-            $stripe->resolveRedirectAfterPayment($order, $status, $transaction)
+            $stripe->resolveRedirectUrlAfterPayment($order, $status, $transaction)
         );
     }
 }

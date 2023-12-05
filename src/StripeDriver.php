@@ -22,9 +22,9 @@ class StripeDriver extends Driver
     public readonly StripeClient $client;
 
     /**
-     * The payment redirect path callback.
+     * The payment redirect URL resovler callback.
      */
-    protected static ?Closure $redirectAfterPayment = null;
+    protected static ?Closure $redirectUrlAfterPayment = null;
 
     /**
      * Create a new driver instance.
@@ -37,20 +37,20 @@ class StripeDriver extends Driver
     }
 
     /**
-     * Set the payment redirect path resolver.
+     * Set the redirect URL resolver after payment.
      */
-    public static function redirectAfterPayment(Closure $callback): void
+    public static function redirectUrlAfterPayment(Closure $callback): void
     {
-        static::$redirectAfterPayment = $callback;
+        static::$redirectUrlAfterPayment = $callback;
     }
 
     /**
-     * Resolve the redirect path after payment.
+     * Resolve the redirect URL after payment.
      */
-    public function resolveRedirectAfterPayment(Order $order, string $staus, Transaction $transaction = null): string
+    public function resolveRedirectUrlAfterPayment(Order $order, string $staus, Transaction $transaction = null): string
     {
-        if (! is_null(static::$redirectAfterPayment)) {
-            return call_user_func_array(static::$redirectAfterPayment, [$order, $staus, $transaction]);
+        if (! is_null(static::$redirectUrlAfterPayment)) {
+            return call_user_func_array(static::$redirectUrlAfterPayment, [$order, $staus, $transaction]);
         }
 
         return match ($staus) {

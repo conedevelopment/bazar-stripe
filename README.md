@@ -17,7 +17,7 @@ STRIPE_SUCCESS_URL=
 STRIPE_CANCEL_URL=
 ```
 
-### Customizing Redurect URL After Payment Intent
+### Customizing Redirect URL After Payment Intent
 
 ```php
 namespace App\Providers;
@@ -40,7 +40,8 @@ class AppServiceProvider extends ServiceProvider
 }
 ```
 
-> Note, the `redirectUrlAfterPayment` method overrides the `STRIPE_SUCCESS_URL` and `STRIPE_CANCEL_URL` values for the given order.
+> [!NOTE]  
+> The `redirectUrlAfterPayment` method overrides `STRIPE_SUCCESS_URL` and `STRIPE_CANCEL_URL` values for the given order.
 
 ## Webhook Events
 
@@ -76,4 +77,5 @@ class StripeWebhookHandler
 }
 ```
 
+> [!TIP]
 > If [Event Discovery](https://laravel.com/docs/master/events#event-discovery) is disabled, make sure the listener is bound to the `WebhookInvoked` event in your `EventServiceProvider`.

@@ -22,7 +22,7 @@ class StripeDriver extends Driver
     public readonly StripeClient $client;
 
     /**
-     * The payment redirect URL resovler callback.
+     * The payment redirect URL resolver callback.
      */
     protected static ?Closure $redirectUrlAfterPayment = null;
 
@@ -47,13 +47,13 @@ class StripeDriver extends Driver
     /**
      * Resolve the redirect URL after payment.
      */
-    public function resolveRedirectUrlAfterPayment(Order $order, string $staus, Transaction $transaction = null): string
+    public function resolveRedirectUrlAfterPayment(Order $order, string $status, Transaction $transaction = null): string
     {
         if (! is_null(static::$redirectUrlAfterPayment)) {
-            return call_user_func_array(static::$redirectUrlAfterPayment, [$order, $staus, $transaction]);
+            return call_user_func_array(static::$redirectUrlAfterPayment, [$order, $status, $transaction]);
         }
 
-        return match ($staus) {
+        return match ($status) {
             'success' => $this->config['success_url'] ?? '/',
             default => $this->config['cancel_url'] ?? '/',
         };
@@ -62,17 +62,17 @@ class StripeDriver extends Driver
     /**
      * {@inheritdoc}
      */
-    public function pay(Order $order, float $amount = null, array $attrributes = []): Transaction
+    public function pay(Order $order, float $amount = null, array $attributes = []): Transaction
     {
-        return $order->pay($amount, 'stripe', $attrributes);
+        return $order->pay($amount, 'stripe', $attributes);
     }
 
     /**
      * {@inheritdoc}
      */
-    public function refund(Order $order, float $amount = null, array $attrributes = []): Transaction
+    public function refund(Order $order, float $amount = null, array $attributes = []): Transaction
     {
-        return $order->refund($amount, 'stripe', $attrributes);
+        return $order->refund($amount, 'stripe', $attributes);
     }
 
     /**

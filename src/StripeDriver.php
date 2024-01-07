@@ -17,6 +17,11 @@ use Throwable;
 class StripeDriver extends Driver
 {
     /**
+     * The driver name.
+     */
+    protected string $name = 'stripe';
+
+    /**
      * The Stripe client instance.
      */
     public readonly StripeClient $client;
@@ -47,7 +52,7 @@ class StripeDriver extends Driver
     /**
      * Resolve the redirect URL after payment.
      */
-    public function resolveRedirectUrlAfterPayment(Order $order, string $status, Transaction $transaction = null): string
+    public function resolveRedirectUrlAfterPayment(Order $order, string $staus, ?Transaction $transaction = null): string
     {
         if (! is_null(static::$redirectUrlAfterPayment)) {
             return call_user_func_array(static::$redirectUrlAfterPayment, [$order, $status, $transaction]);
@@ -57,22 +62,6 @@ class StripeDriver extends Driver
             'success' => $this->config['success_url'] ?? '/',
             default => $this->config['cancel_url'] ?? '/',
         };
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function pay(Order $order, float $amount = null, array $attributes = []): Transaction
-    {
-        return $order->pay($amount, 'stripe', $attributes);
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function refund(Order $order, float $amount = null, array $attributes = []): Transaction
-    {
-        return $order->refund($amount, 'stripe', $attributes);
     }
 
     /**
@@ -101,7 +90,7 @@ class StripeDriver extends Driver
                     'quantity' => $item->getQuantity(),
                 ];
             })->toArray(),
-            'billing_address_collection' => 'required',
+            // 'billing_address_collection' => 'required',
             'mode' => 'payment',
             'success_url' => $this->redirectUrl('success'),
             'cancel_url' => $this->redirectUrl('cancelled'),

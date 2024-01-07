@@ -59,8 +59,8 @@ class StripeWebhookHandler
 {
     public function handle(WebhookInvoked $event): void
     {
+        // https://stripe.com/docs/api/events/types
         $callback = match ($event->event->type) {
-            // https://stripe.com/docs/api/events/types
             'payment_intent.payment_failed' => function (Event $event): void {
                 // mark transaction as failed
             },
@@ -72,7 +72,7 @@ class StripeWebhookHandler
             },
         };
 
-        call_user_func_array($callback, [$evet->event]);
+        call_user_func_array($callback, [$event->event]);
     }
 }
 ```

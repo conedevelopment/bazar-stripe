@@ -2,8 +2,10 @@
 
 namespace Cone\Bazar\Stripe;
 
+use Cone\Bazar\Stripe\Events\WebhookInvoked;
 use Cone\Bazar\Stripe\Http\Controllers\PaymentController;
 use Cone\Bazar\Stripe\Http\Controllers\WebhookController;
+use Cone\Bazar\Stripe\Listeners\HandleWebhook;
 use Cone\Bazar\Support\Facades\Gateway;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
@@ -36,6 +38,15 @@ class StripeServiceProvider extends ServiceProvider
             );
         }
 
+        $this->registerRoutes();
+        $this->registerEvents();
+    }
+
+    /**
+     * Register the package routes.
+     */
+    protected function registerRoutes(): void
+    {
         if (! $this->app->routesAreCached()) {
             $this->app['router']
                 ->get('/bazar/stripe/payment', PaymentController::class)
@@ -45,5 +56,13 @@ class StripeServiceProvider extends ServiceProvider
                 ->post('/bazar/stripe/webhook', WebhookController::class)
                 ->name('bazar.stripe.webhook');
         }
+    }
+
+    /**
+     * Register events.
+     */
+    protected function registerEvents(): void
+    {
+        $this->app['events']->listen(WebhookInvoked::class, HandleWebhook::class);
     }
 }

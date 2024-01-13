@@ -2,7 +2,6 @@
 
 namespace Cone\Bazar\Stripe;
 
-use Closure;
 use Cone\Bazar\Gateway\Driver;
 use Cone\Bazar\Gateway\Response;
 use Cone\Bazar\Interfaces\LineItem;
@@ -12,7 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\URL;
 use Stripe\Checkout\Session;
 use Stripe\StripeClient;
-use Throwable;
+use Stripe\Webhook;
 
 class StripeDriver extends Driver
 {
@@ -26,10 +25,7 @@ class StripeDriver extends Driver
      */
     public readonly StripeClient $client;
 
-    /**
-     * The payment redirect URL resolver callback.
-     */
-    protected static ?Closure $redirectUrlAfterPayment = null;
+    protected ?Session $session = null;
 
     /**
      * Create a new driver instance.
@@ -42,34 +38,21 @@ class StripeDriver extends Driver
     }
 
     /**
-     * Set the redirect URL resolver after payment.
-     */
-    public static function redirectUrlAfterPayment(Closure $callback): void
-    {
-        static::$redirectUrlAfterPayment = $callback;
-    }
-
-    /**
-     * Resolve the redirect URL after payment.
-     */
-    public function resolveRedirectUrlAfterPayment(Order $order, string $staus, ?Transaction $transaction = null): string
-    {
-        if (! is_null(static::$redirectUrlAfterPayment)) {
-            return call_user_func_array(static::$redirectUrlAfterPayment, [$order, $status, $transaction]);
-        }
-
-        return match ($status) {
-            'success' => $this->config['success_url'] ?? '/',
-            default => $this->config['cancel_url'] ?? '/',
-        };
-    }
-
-    /**
      * {@inheritdoc}
      */
     public function getTransactionUrl(Transaction $transaction): ?string
     {
         return sprintf('https://dashboard.stripe.com/%spayments/%s', $this->config['test_mode'] ? 'test/' : '', $transaction->key);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getCaptureUrl(Order $order): string
+    {
+        return URL::route('bazar.gateway.capture', [
+            'driver' => $this->name,
+        ]).'&session_id={CHECKOUT_SESSION_ID}';
     }
 
     /**
@@ -90,32 +73,79 @@ class StripeDriver extends Driver
                     'quantity' => $item->getQuantity(),
                 ];
             })->toArray(),
-            // 'billing_address_collection' => 'required',
             'mode' => 'payment',
-            'success_url' => $this->redirectUrl('success'),
-            'cancel_url' => $this->redirectUrl('cancelled'),
+            'success_url' => $this->getCaptureUrl($order),
+            'cancel_url' => $this->getFailureUrl($order),
         ]);
-    }
-
-    /**
-     * Get the redirect URL.
-     */
-    protected function redirectUrl(string $status): string
-    {
-        return URL::route('bazar.stripe.payment', ['status' => $status]).'&session_id={CHECKOUT_SESSION_ID}';
     }
 
     /**
      * {@inheritdoc}
      */
-    public function checkout(Request $request, Order $order): Response
+    public function checkout(Request $request, Order $order): Order
     {
-        try {
-            $url = $this->createSession($order)->url;
-        } catch (Throwable $exception) {
-            $url = $this->redirectUrl('failed');
+        $this->session = $this->createSession($order);
+
+        return $order;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function handleCheckout(Request $request): Response
+    {
+        $response = parent::handleCheckout($request);
+
+        return $response->url($this->session->url);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function resolveOrderForCapture(Request $request): Order
+    {
+        return Order::query()->where('uuid', $this->session->client_reference_id)->firstOrFail();
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function capture(Request $request, Order $order): Order
+    {
+        $this->pay($order, null, ['key' => $this->session->payment_intent]);
+
+        return $order;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function handleCapture(Request $request): Response
+    {
+        $this->session = $this->client->checkout->sessions->retrieve(
+            $request->input('session_id')
+        );
+
+        return parent::handleCapture($request);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function handleNotification(Request $request): Response
+    {
+        $event = Webhook::constructEvent(
+            $request->getContent(),
+            $request->server('HTTP_STRIPE_SIGNATURE'),
+            $this->config['secret']
+        );
+
+        if ($event->event->type === 'payment_intent.succeeded') {
+            $transaction = Transaction::query()->where('key', $event->data['object']['id'])->firstOrFail();
+
+            $transaction->markAsCompleted();
         }
 
-        return parent::checkout($request, $order)->url($url);
+        return parent::handleNotification($request);
     }
 }

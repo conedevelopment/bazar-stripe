@@ -8,8 +8,8 @@ return [
 
     'secret' => env('STRIPE_SECRET'),
 
-    'success_url' => env('STRIPE_SUCCESS_URL', '/'),
+    'success_url' => env('STRIPE_SUCCESS_URL', '/?session_id={CHECKOUT_SESSION_ID}'),
 
-    'failure_url' => env('STRIPE_FAILURE_URL', '/'),
+    'failure_url' => env('STRIPE_FAILURE_URL', '/?session_id={CHECKOUT_SESSION_ID}'),
 
 ];

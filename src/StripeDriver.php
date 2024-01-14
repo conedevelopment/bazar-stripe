@@ -25,6 +25,9 @@ class StripeDriver extends Driver
      */
     public readonly StripeClient $client;
 
+    /**
+     * The Stripe session instance.
+     */
     protected ?Session $session = null;
 
     /**
@@ -52,7 +55,7 @@ class StripeDriver extends Driver
     {
         return URL::route('bazar.gateway.capture', [
             'driver' => $this->name,
-        ]).'&session_id={CHECKOUT_SESSION_ID}';
+        ]).'?session_id={CHECKOUT_SESSION_ID}';
     }
 
     /**

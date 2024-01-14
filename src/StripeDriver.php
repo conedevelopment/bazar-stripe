@@ -59,6 +59,22 @@ class StripeDriver extends Driver
     }
 
     /**
+     * {@inheritdoc}
+     */
+    public function getSuccessUrl(Order $order): string
+    {
+        return parent::getSuccessUrl($order).'?session_id={CHECKOUT_SESSION_ID}';
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getFailureUrl(Order $order): string
+    {
+        return parent::getFailureUrl($order).'?session_id={CHECKOUT_SESSION_ID}';
+    }
+
+    /**
      * Create a new Stripe session.
      */
     protected function createSession(Order $order): Session
@@ -99,7 +115,11 @@ class StripeDriver extends Driver
     {
         $response = parent::handleCheckout($request);
 
-        return $response->url($this->session->url);
+        if (! is_null($this->session)) {
+            $response->url($this->session->url);
+        }
+
+        return $response;
     }
 
     /**

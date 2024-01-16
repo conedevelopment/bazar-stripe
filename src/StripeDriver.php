@@ -10,8 +10,10 @@ use Cone\Bazar\Models\Transaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\URL;
 use Stripe\Checkout\Session;
+use Stripe\Event;
 use Stripe\StripeClient;
 use Stripe\Webhook;
+use Throwable;
 
 class StripeDriver extends Driver
 {
@@ -59,22 +61,6 @@ class StripeDriver extends Driver
     }
 
     /**
-     * {@inheritdoc}
-     */
-    public function getSuccessUrl(Order $order): string
-    {
-        return parent::getSuccessUrl($order).'?session_id={CHECKOUT_SESSION_ID}';
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function getFailureUrl(Order $order): string
-    {
-        return parent::getFailureUrl($order).'?session_id={CHECKOUT_SESSION_ID}';
-    }
-
-    /**
      * Create a new Stripe session.
      */
     protected function createSession(Order $order): Session
@@ -95,6 +81,11 @@ class StripeDriver extends Driver
             'mode' => 'payment',
             'success_url' => $this->getCaptureUrl($order),
             'cancel_url' => $this->getFailureUrl($order),
+            'payment_intent_data' => [
+                'metadata' => [
+                    'order' => $order->uuid,
+                ],
+            ],
         ]);
     }
 
@@ -135,7 +126,9 @@ class StripeDriver extends Driver
      */
     public function capture(Request $request, Order $order): Order
     {
-        $this->pay($order, null, ['key' => $this->session->payment_intent]);
+        if (! $order->transactions()->where('key', $this->session->payment_intent)->exists()) {
+            $this->pay($order, null, ['key' => $this->session->payment_intent]);
+        }
 
         return $order;
     }
@@ -163,12 +156,34 @@ class StripeDriver extends Driver
             $this->config['secret']
         );
 
-        if ($event->event->type === 'payment_intent.succeeded') {
-            $transaction = Transaction::query()->where('key', $event->data['object']['id'])->firstOrFail();
-
-            $transaction->markAsCompleted();
+        switch ($event->type) {
+            case 'payment_intent.succeeded':
+                $this->handlePaymentIntentSucceeded($request, $event);
+                break;
+            default:
+                break;
         }
 
         return parent::handleNotification($request);
+    }
+
+    /**
+     * Handle the payment_intent.succeeded event.
+     */
+    protected function handlePaymentIntentSucceeded(Request $request, Event $event): void
+    {
+        try {
+            $transaction = Transaction::query()->where('key', $event->data['object']['id'])->firstOrFail();
+        } catch (Throwable $exception) {
+            $order = Order::query()->where('uuid', $event->data['object']['metadata']['order'])->firstOrFail();
+
+            $transaction = $this->pay(
+                $order,
+                $event->data['object']['amount'] / 100,
+                ['key' => $event->data['object']['id']]
+            );
+        }
+
+        $transaction->markAsCompleted();
     }
 }

@@ -33,5 +33,9 @@ class StripeServiceProvider extends ServiceProvider
                 'bazar-stripe-config'
             );
         }
+
+        $this->app['events']->listen(
+            Events\StripeWebhookInvoked::class, Listeners\HandlePaymentIntentSuccededEvent::class
+        );
     }
 }

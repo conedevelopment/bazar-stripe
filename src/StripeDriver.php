@@ -7,13 +7,12 @@ use Cone\Bazar\Gateway\Response;
 use Cone\Bazar\Interfaces\LineItem;
 use Cone\Bazar\Models\Order;
 use Cone\Bazar\Models\Transaction;
+use Cone\Bazar\Stripe\Events\StripeWebhookInvoked;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\URL;
 use Stripe\Checkout\Session;
-use Stripe\Event;
 use Stripe\StripeClient;
 use Stripe\Webhook;
-use Throwable;
 
 class StripeDriver extends Driver
 {
@@ -156,34 +155,8 @@ class StripeDriver extends Driver
             $this->config['secret']
         );
 
-        switch ($event->type) {
-            case 'payment_intent.succeeded':
-                $this->handlePaymentIntentSucceeded($request, $event);
-                break;
-            default:
-                break;
-        }
+        StripeWebhookInvoked::dispatch($event);
 
         return parent::handleNotification($request);
-    }
-
-    /**
-     * Handle the payment_intent.succeeded event.
-     */
-    protected function handlePaymentIntentSucceeded(Request $request, Event $event): void
-    {
-        try {
-            $transaction = Transaction::query()->where('key', $event->data['object']['id'])->firstOrFail();
-        } catch (Throwable $exception) {
-            $order = Order::query()->where('uuid', $event->data['object']['metadata']['order'])->firstOrFail();
-
-            $transaction = $this->pay(
-                $order,
-                $event->data['object']['amount'] / 100,
-                ['key' => $event->data['object']['id']]
-            );
-        }
-
-        $transaction->markAsCompleted();
     }
 }

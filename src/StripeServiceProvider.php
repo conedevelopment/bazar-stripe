@@ -13,12 +13,8 @@ class StripeServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        if (! $this->app->configurationIsCached()) {
-            $this->mergeConfigFrom(__DIR__.'/../config/bazar_stripe.php', 'bazar_stripe');
-        }
-
         Gateway::extend('stripe', static function (Application $app): StripeDriver {
-            return new StripeDriver($app['config']->get('bazar_stripe'));
+            return new StripeDriver($app['config']->get('bazar.gateway.drivers.stripe', []));
         });
     }
 
@@ -27,13 +23,6 @@ class StripeServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        if ($this->app->runningInConsole()) {
-            $this->publishes(
-                [__DIR__.'/../config/bazar_stripe.php' => $this->app->configPath('bazar_stripe.php')],
-                'bazar-stripe-config'
-            );
-        }
-
         $this->app['events']->listen(
             Events\StripeWebhookInvoked::class, Listeners\HandlePaymentIntentSuccededEvent::class
         );

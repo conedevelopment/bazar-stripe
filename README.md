@@ -13,35 +13,28 @@ composer require conedevelopment/bazar-stripe
 ```ini
 STRIPE_API_KEY=
 STRIPE_SECRET=
-STRIPE_SUCCESS_URL=
-STRIPE_CANCEL_URL=
 ```
 
-### Customizing Redirect URL After Payment Intent
+### Bazar Config
 
 ```php
-namespace App\Providers;
+    // config/bazar.php
 
-use Cone\Bazar\Models\Order;
-use Cone\Bazar\Models\Transaction;
-use Cone\Bazar\Stripe\StripeDriver;
+    'gateway' => [
+        'drivers' => [
+            // ...
+            'stripe' => [
+                'test_mode' => env('STRIPE_TEST_MODE', false),
+                'api_key' => env('STRIPE_API_KEY'),
+                'secret' => env('STRIPE_SECRET'),
+                'success_url' => env('STRIPE_SUCCESS_URL', '/'),
+                'failure_url' => env('STRIPE_FAILURE_URL', '/'),
+            ],
+        ],
+    ],
 
-class AppServiceProvider extends ServiceProvider
-{
-    public function register(): void
-    {
-        StripeDriver::redirectUrlAfterPayment(function (Order $order, string $status, Transaction $transaction = null): string {
-            return match ($status) {
-                'success' => '/shop/account/orders/'.$order->uuid,
-                default => '/shop/retry-checkout?order='.$order->uuid;
-            };
-        });
-    }
-}
+    // ...
 ```
-
-> [!NOTE]  
-> The `redirectUrlAfterPayment` method overrides `STRIPE_SUCCESS_URL` and `STRIPE_CANCEL_URL` values for the given order.
 
 ## Webhook Events
 

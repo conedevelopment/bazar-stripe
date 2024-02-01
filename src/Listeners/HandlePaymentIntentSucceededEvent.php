@@ -8,7 +8,7 @@ use Cone\Bazar\Stripe\Events\StripeWebhookInvoked;
 use Cone\Bazar\Support\Facades\Gateway;
 use Throwable;
 
-class HandlePaymentIntentSuccededEvent
+class HandlePaymentIntentSucceededEvent
 {
     /**
      * Handle the event.

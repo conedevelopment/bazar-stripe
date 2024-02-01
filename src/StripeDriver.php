@@ -101,9 +101,9 @@ class StripeDriver extends Driver
     /**
      * {@inheritdoc}
      */
-    public function handleCheckout(Request $request): Response
+    public function handleCheckout(Request $request, Order $order): Response
     {
-        $response = parent::handleCheckout($request);
+        $response = parent::handleCheckout($request, $order);
 
         if (! is_null($this->session)) {
             $response->url($this->session->url);
@@ -135,13 +135,13 @@ class StripeDriver extends Driver
     /**
      * {@inheritdoc}
      */
-    public function handleCapture(Request $request): Response
+    public function handleCapture(Request $request, Order $order): Response
     {
         $this->session = $this->client->checkout->sessions->retrieve(
             $request->input('session_id')
         );
 
-        return parent::handleCapture($request);
+        return parent::handleCapture($request, $order);
     }
 
     /**

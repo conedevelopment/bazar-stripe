@@ -117,7 +117,11 @@ class StripeDriver extends Driver
      */
     public function resolveOrderForCapture(Request $request): Order
     {
-        return Order::query()->where('uuid', $this->session->client_reference_id)->firstOrFail();
+        $this->session = $this->client->checkout->sessions->retrieve(
+            $request->input('session_id')
+        );
+
+        return Order::proxy()->newQuery()->where('uuid', $this->session->client_reference_id)->firstOrFail();
     }
 
     /**
@@ -130,18 +134,6 @@ class StripeDriver extends Driver
         }
 
         return $order;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function handleCapture(Request $request, Order $order): Response
-    {
-        $this->session = $this->client->checkout->sessions->retrieve(
-            $request->input('session_id')
-        );
-
-        return parent::handleCapture($request, $order);
     }
 
     /**

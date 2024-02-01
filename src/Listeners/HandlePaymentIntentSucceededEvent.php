@@ -18,9 +18,9 @@ class HandlePaymentIntentSucceededEvent
         $stripeEvent = $event->event;
 
         try {
-            $transaction = Transaction::query()->where('key', $stripeEvent->data['object']['id'])->firstOrFail();
+            $transaction = Transaction::proxy()->newQuery()->where('key', $stripeEvent->data['object']['id'])->firstOrFail();
         } catch (Throwable $exception) {
-            $order = Order::query()->where('uuid', $stripeEvent->data['object']['metadata']['order'])->firstOrFail();
+            $order = Order::proxy()->newQuery()->where('uuid', $stripeEvent->data['object']['metadata']['order'])->firstOrFail();
 
             $transaction = Gateway::driver('stripe')->pay(
                 $order,

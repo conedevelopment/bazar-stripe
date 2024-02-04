@@ -2,6 +2,7 @@
 
 namespace Cone\Bazar\Stripe;
 
+use Cone\Bazar\Exceptions\TransactionDriverMismatchException;
 use Cone\Bazar\Gateway\Driver;
 use Cone\Bazar\Gateway\Response;
 use Cone\Bazar\Interfaces\LineItem;
@@ -150,5 +151,43 @@ class StripeDriver extends Driver
         StripeWebhookInvoked::dispatch($event);
 
         return parent::handleNotification($request);
+    }
+
+    /**
+     * Handle the manual transaction creation.
+     */
+    public function handleManualTransaction(Transaction $transaction): void
+    {
+        match ($transaction->type) {
+            Transaction::PAYMENT => $this->handleManualPayment($transaction),
+            Transaction::REFUND => $this->handleManualRefund($transaction),
+            default => null,
+        };
+    }
+
+    /**
+     * Handle the manual payment creatiion.
+     */
+    public function handleManualPayment(Transaction $transaction): void
+    {
+        // create payment link
+    }
+
+    /**
+     * Handle the manual refund creatiion.
+     */
+    public function handleManualRefund(Transaction $transaction): void
+    {
+        $payment = $transaction->order->transaction;
+
+        if ($payment->driver !== $transaction->driver) {
+            throw new TransactionDriverMismatchException(sprintf(
+                "The refund driver [%s] does not match the base transaction's driver [%s].",
+                $transaction->driver,
+                $payment->driver
+            ));
+        }
+
+        // create refund
     }
 }

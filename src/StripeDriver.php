@@ -10,6 +10,7 @@ use Cone\Bazar\Models\Order;
 use Cone\Bazar\Models\Transaction;
 use Cone\Bazar\Stripe\Events\StripeWebhookInvoked;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\URL;
 use Stripe\Checkout\Session;
 use Stripe\StripeClient;
@@ -170,7 +171,19 @@ class StripeDriver extends Driver
      */
     public function handleManualPayment(Transaction $transaction): void
     {
-        // create payment link
+        $payment = $this->client->paymentIntents->create([
+            'amount' => $transaction->amount * 100,
+            'currency' => strtolower($transaction->order->currency),
+            'automatic_payment_methods' => ['enabled' => true],
+            'metadata' => [
+                'order' => $transaction->order->uuid,
+            ],
+        ]);
+
+        $transaction
+            ->setAttribute('key', $payment->id)
+            ->setAttribute('completed_at', Date::now())
+            ->save();
     }
 
     /**
@@ -188,6 +201,14 @@ class StripeDriver extends Driver
             ));
         }
 
-        // create refund
+        $refund = $this->client->refunds->create([
+            'payment_intent' => $payment->key,
+            'amount' => $transaction->amount,
+            'metadata' => [
+                'order' => $transaction->order->uuid,
+            ],
+        ]);
+
+        $transaction->setAttribute('key', $refund->id)->save();
     }
 }

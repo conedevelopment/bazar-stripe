@@ -171,19 +171,7 @@ class StripeDriver extends Driver
      */
     public function handleManualPayment(Transaction $transaction): void
     {
-        $payment = $this->client->paymentIntents->create([
-            'amount' => $transaction->amount * 100,
-            'currency' => strtolower($transaction->order->currency),
-            'automatic_payment_methods' => ['enabled' => true],
-            'metadata' => [
-                'order' => $transaction->order->uuid,
-            ],
-        ]);
-
-        $transaction
-            ->setAttribute('key', $payment->id)
-            ->setAttribute('completed_at', Date::now())
-            ->save();
+        //
     }
 
     /**

@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Date;
 use Stripe\Event;
 use Throwable;
 
-class HandlePaymentIntentSucceededEvent
+class HandleStripeWebhook
 {
     /**
      * Handle the event.

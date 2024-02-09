@@ -24,7 +24,7 @@ class StripeServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->app['events']->listen(
-            Events\StripeWebhookInvoked::class, Listeners\HandlePaymentIntentSuccededEvent::class
+            Events\StripeWebhookInvoked::class, Listeners\HandleStripeWebhook::class
         );
     }
 }

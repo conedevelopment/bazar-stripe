@@ -196,6 +196,6 @@ class StripeDriver extends Driver
             ],
         ]);
 
-        $transaction->setAttribute('key', $refund->id)->save();
+        $transaction->setAttribute('key', $refund->id)->markAsCompleted();
     }
 }

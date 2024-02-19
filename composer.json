@@ -25,16 +25,14 @@
         "laravel/laravel": "^10.16",
         "laravel/pint": "^1.6",
         "mockery/mockery": "^1.4.4",
-        "nunomaduro/larastan": "^2.1.6",
+        "larastan/larastan": "^2.9",
         "phpunit/phpunit": "^10.2.5"
     },
     "minimum-stability": "dev",
     "prefer-stable": true,
     "autoload": {
         "psr-4": {
-            "Cone\\Bazar\\Stripe\\": "src/",
-            "Cone\\Bazar\\Stripe\\Database\\Seeders\\": "database/seeders/",
-            "Cone\\Bazar\\Stripe\\Database\\Factories\\": "database/factories/"
+            "Cone\\Bazar\\Stripe\\": "src/"
         }
     },
     "autoload-dev": {

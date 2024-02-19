@@ -190,7 +190,7 @@ class StripeDriver extends Driver
 
         $refund = $this->client->refunds->create([
             'payment_intent' => $payment->key,
-            'amount' => $transaction->amount,
+            'amount' => $transaction->amount * 100,
             'metadata' => [
                 'order' => $transaction->order->uuid,
             ],

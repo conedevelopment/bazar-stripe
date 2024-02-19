@@ -10,7 +10,6 @@ use Cone\Bazar\Models\Order;
 use Cone\Bazar\Models\Transaction;
 use Cone\Bazar\Stripe\Events\StripeWebhookInvoked;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\URL;
 use Stripe\Checkout\Session;
 use Stripe\StripeClient;
@@ -97,7 +96,7 @@ class StripeDriver extends Driver
     {
         $this->session = $this->createSession($order);
 
-        return $order;
+        return parent::checkout($request, $order);
     }
 
     /**
@@ -123,7 +122,7 @@ class StripeDriver extends Driver
             $request->input('session_id')
         );
 
-        return Order::proxy()->newQuery()->where('uuid', $this->session->client_reference_id)->firstOrFail();
+        return Order::proxy()->newQuery()->where('bazar_orders.uuid', $this->session->client_reference_id)->firstOrFail();
     }
 
     /**
@@ -131,7 +130,7 @@ class StripeDriver extends Driver
      */
     public function capture(Request $request, Order $order): Order
     {
-        if (! $order->transactions()->where('key', $this->session->payment_intent)->exists()) {
+        if (! $order->transactions()->where('bazar_transactions.key', $this->session->payment_intent)->exists()) {
             $this->pay($order, null, ['key' => $this->session->payment_intent]);
         }
 

@@ -6,7 +6,6 @@ use Cone\Bazar\Models\Order;
 use Cone\Bazar\Models\Transaction;
 use Cone\Bazar\Stripe\Events\StripeWebhookInvoked;
 use Cone\Bazar\Support\Facades\Gateway;
-use Illuminate\Support\Facades\Date;
 use Stripe\Event;
 use Throwable;
 
@@ -55,13 +54,15 @@ class HandleStripeWebhook
      */
     public function handleRefund(Event $event, Order $order): void
     {
-        foreach ($event->data['refunds']['data'] as $refund) {
+        foreach ($event->data['object']['refunds']['data'] as $refund) {
             if (is_null($order->transactions->firstWhere('key', $refund['id']))) {
-                Gateway::driver('stripe')->refund(
+                $transaction = Gateway::driver('stripe')->refund(
                     $order,
                     $refund['amount'] / 100,
-                    ['key' => $refund['id'], 'completed_at' => Date::now()]
+                    ['key' => $refund['id']]
                 );
+
+                $transaction->markAsCompleted();
             }
         }
     }

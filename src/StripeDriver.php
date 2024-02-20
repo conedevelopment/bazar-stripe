@@ -149,12 +149,12 @@ class StripeDriver extends Driver
             $this->config['secret']
         );
 
-        switch ($event->event->type) {
+        switch ($event->type) {
             case 'charge.refunded':
-                $this->handleIrn($event->event);
+                $this->handleIrn($event);
                 break;
             case 'payment_intent.succeeded':
-                $this->handleIpn($event->event);
+                $this->handleIpn($event);
                 break;
         }
 

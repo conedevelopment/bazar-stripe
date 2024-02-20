@@ -17,14 +17,4 @@ class StripeServiceProvider extends ServiceProvider
             return new StripeDriver($app['config']->get('bazar.gateway.drivers.stripe', []));
         });
     }
-
-    /**
-     * Bootstrap any application services.
-     */
-    public function boot(): void
-    {
-        $this->app['events']->listen(
-            Events\StripeWebhookInvoked::class, Listeners\HandleStripeWebhook::class
-        );
-    }
 }

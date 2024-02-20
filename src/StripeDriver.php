@@ -12,8 +12,10 @@ use Cone\Bazar\Stripe\Events\StripeWebhookInvoked;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\URL;
 use Stripe\Checkout\Session;
+use Stripe\Event;
 use Stripe\StripeClient;
 use Stripe\Webhook;
+use Throwable;
 
 class StripeDriver extends Driver
 {
@@ -122,7 +124,7 @@ class StripeDriver extends Driver
             $request->input('session_id')
         );
 
-        return Order::proxy()->newQuery()->where('bazar_orders.uuid', $this->session->client_reference_id)->firstOrFail();
+        return $this->resolveOrder($this->session->client_reference_id);
     }
 
     /**
@@ -147,6 +149,15 @@ class StripeDriver extends Driver
             $request->server('HTTP_STRIPE_SIGNATURE'),
             $this->config['secret']
         );
+
+        switch ($event->event->type) {
+            case 'charge.refunded':
+                $this->handleIrn($event->event);
+                break;
+            case 'payment_intent.succeeded':
+                $this->handleIpn($event->event);
+                break;
+        }
 
         StripeWebhookInvoked::dispatch($event);
 
@@ -197,5 +208,53 @@ class StripeDriver extends Driver
         ]);
 
         $transaction->setAttribute('key', $refund->id)->markAsCompleted();
+    }
+
+    /**
+     * Resolve the order for the notification.
+     */
+    public function resolveOrderForNotification(Event $event): Order
+    {
+        return $this->resolveOrder($event->event->data['object']['metadata']['order']);
+    }
+
+    /**
+     * Handle the payment.
+     */
+    public function handleIpn(Event $event): void
+    {
+        $order = $this->resolveOrderForNotification($event);
+
+        try {
+            $transaction = Transaction::proxy()->newQuery()->where('key', $event->data['object']['id'])->firstOrFail();
+        } catch (Throwable $exception) {
+            $transaction = $this->pay(
+                $order,
+                $event->data['object']['amount'] / 100,
+                ['key' => $event->data['object']['id']]
+            );
+        }
+
+        $transaction->markAsCompleted();
+    }
+
+    /**
+     * Handle the refund.
+     */
+    public function handleIrn(Event $event): void
+    {
+        $order = $this->resolveOrderForNotification($event);
+
+        foreach ($event->data['object']['refunds']['data'] as $refund) {
+            if (is_null($order->transactions->firstWhere('key', $refund['id']))) {
+                $transaction = $this->refund(
+                    $order,
+                    $refund['amount'] / 100,
+                    ['key' => $refund['id']]
+                );
+
+                $transaction->markAsCompleted();
+            }
+        }
     }
 }

@@ -214,7 +214,7 @@ class StripeDriver extends Driver
      */
     public function resolveOrderForNotification(Event $event): Order
     {
-        return $this->resolveOrder($event->event->data['object']['metadata']['order']);
+        return $this->resolveOrder($event->data['object']['metadata']['order']);
     }
 
     /**

@@ -15,7 +15,6 @@ use Stripe\Checkout\Session;
 use Stripe\Event;
 use Stripe\StripeClient;
 use Stripe\Webhook;
-use Throwable;
 
 class StripeDriver extends Driver
 {
@@ -225,15 +224,16 @@ class StripeDriver extends Driver
     {
         $order = $this->resolveOrderForNotification($event);
 
-        try {
-            $transaction = Transaction::proxy()->newQuery()->where('key', $event->data['object']['id'])->firstOrFail();
-        } catch (Throwable $exception) {
-            $transaction = $this->pay(
-                $order,
-                $event->data['object']['amount'] / 100,
-                ['key' => $event->data['object']['id']]
-            );
-        }
+        $transaction = Transaction::proxy()
+            ->newQuery()
+            ->where('key', $event->data['object']['id'])
+            ->firstOr(function () use ($order, $event): Transaction {
+                return $this->pay(
+                    $order,
+                    $event->data['object']['amount'] / 100,
+                    ['key' => $event->data['object']['id']]
+                );
+            });
 
         $transaction->markAsCompleted();
     }

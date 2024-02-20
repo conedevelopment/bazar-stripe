@@ -206,7 +206,7 @@ class StripeDriver extends Driver
             ],
         ]);
 
-        $transaction->setAttribute('key', $refund->id)->markAsCompleted();
+        $transaction->setAttribute('key', $refund->id)->save();
     }
 
     /**
@@ -246,15 +246,20 @@ class StripeDriver extends Driver
         $order = $this->resolveOrderForNotification($event);
 
         foreach ($event->data['object']['refunds']['data'] as $refund) {
-            if (is_null($order->transactions->firstWhere('key', $refund['id']))) {
-                $transaction = $this->refund(
-                    $order,
-                    $refund['amount'] / 100,
-                    ['key' => $refund['id']]
-                );
+            $transaction = $order->refunds->first(
+                static function (Transaction $transaction) use ($refund): bool {
+                    return $transaction->key === $refund['id'];
+                },
+                function () use ($order, $refund): Transaction {
+                    return $this->refund(
+                        $order,
+                        $refund['amount'] / 100,
+                        ['key' => $refund['id']]
+                    );
+                }
+            );
 
-                $transaction->markAsCompleted();
-            }
+            $transaction->markAsCompleted();
         }
     }
 }

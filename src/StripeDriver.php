@@ -117,11 +117,7 @@ class StripeDriver extends Driver
      */
     public function resolveOrderForCapture(Request $request): Order
     {
-        $this->session = $this->client->checkout->sessions->retrieve(
-            $request->input('session_id')
-        );
-
-        return $this->resolveOrder($this->session->client_reference_id);
+        return $this->resolveOrder($request->input('order'));
     }
 
     /**
@@ -129,6 +125,10 @@ class StripeDriver extends Driver
      */
     public function capture(Request $request, Order $order): Order
     {
+        $this->session = $this->client->checkout->sessions->retrieve(
+            $request->input('session_id')
+        );
+
         if (! $order->transactions()->where('bazar_transactions.key', $this->session->payment_intent)->exists()) {
             $this->pay($order, null, ['key' => $this->session->payment_intent]);
         }

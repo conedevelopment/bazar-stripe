@@ -115,14 +115,6 @@ class StripeDriver extends Driver
     /**
      * {@inheritdoc}
      */
-    public function resolveOrderForCapture(Request $request): Order
-    {
-        return $this->resolveOrder($request->input('order'));
-    }
-
-    /**
-     * {@inheritdoc}
-     */
     public function capture(Request $request, Order $order): Order
     {
         $this->session = $this->client->checkout->sessions->retrieve(

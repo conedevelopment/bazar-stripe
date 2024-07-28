@@ -17,8 +17,8 @@
     ],
     "require": {
         "php": "^8.2 || ^8.3",
-        "conedevelopment/bazar": "dev-master || ^1.0.3",
-        "stripe/stripe-php": "^13.1"
+        "conedevelopment/bazar": "dev-master || ^1.0.11",
+        "stripe/stripe-php": "^15.4"
     },
     "require-dev": {
         "fakerphp/faker": "^1.9.1",

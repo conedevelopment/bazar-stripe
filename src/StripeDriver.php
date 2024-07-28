@@ -56,9 +56,7 @@ class StripeDriver extends Driver
      */
     public function getCaptureUrl(Order $order): string
     {
-        return URL::route('bazar.gateway.capture', [
-            'driver' => $this->name,
-        ]).'?session_id={CHECKOUT_SESSION_ID}';
+        return parent::getCaptureUrl($order).'&session_id={CHECKOUT_SESSION_ID}';
     }
 
     /**

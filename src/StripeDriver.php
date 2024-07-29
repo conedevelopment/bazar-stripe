@@ -10,7 +10,6 @@ use Cone\Bazar\Models\Order;
 use Cone\Bazar\Models\Transaction;
 use Cone\Bazar\Stripe\Events\StripeWebhookInvoked;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\URL;
 use Stripe\Checkout\Session;
 use Stripe\Event;
 use Stripe\StripeClient;

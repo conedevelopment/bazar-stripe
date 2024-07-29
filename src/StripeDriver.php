@@ -133,24 +133,42 @@ class StripeDriver extends Driver
      */
     public function handleNotification(Request $request): Response
     {
-        $event = Webhook::constructEvent(
+        $event = $this->resolveEvent($request);
+
+        $this->handleWebhook($event);
+
+        return parent::handleNotification($request);
+    }
+
+    /**
+     * Resolve the Stripe event.
+     */
+    protected function resolveEvent(Request $request): Event
+    {
+        return Webhook::constructEvent(
             $request->getContent(),
             $request->server('HTTP_STRIPE_SIGNATURE'),
             $this->config['secret']
         );
+    }
+
+    /**
+     * Handle the webhook.
+     */
+    protected function handleWebhook(Event $event): void
+    {
+        $order = $this->resolveOrder($event->data['object']['metadata']['order']);
 
         switch ($event->type) {
             case 'charge.refunded':
-                $this->handleIrn($event);
+                $this->handleIrn($event, $order);
                 break;
             case 'payment_intent.succeeded':
-                $this->handleIpn($event);
+                $this->handleIpn($event, $order);
                 break;
         }
 
         StripeWebhookInvoked::dispatch($event);
-
-        return parent::handleNotification($request);
     }
 
     /**
@@ -200,20 +218,10 @@ class StripeDriver extends Driver
     }
 
     /**
-     * Resolve the order for the notification.
-     */
-    public function resolveOrderForNotification(Event $event): Order
-    {
-        return $this->resolveOrder($event->data['object']['metadata']['order']);
-    }
-
-    /**
      * Handle the payment.
      */
-    public function handleIpn(Event $event): void
+    public function handleIpn(Event $event, Order $order): void
     {
-        $order = $this->resolveOrderForNotification($event);
-
         $transaction = Transaction::proxy()
             ->newQuery()
             ->where('key', $event->data['object']['id'])
@@ -231,10 +239,8 @@ class StripeDriver extends Driver
     /**
      * Handle the refund.
      */
-    public function handleIrn(Event $event): void
+    public function handleIrn(Event $event, Order $order): void
     {
-        $order = $this->resolveOrderForNotification($event);
-
         foreach ($event->data['object']['refunds']['data'] as $refund) {
             $transaction = $order->refunds->first(
                 static function (Transaction $transaction) use ($refund): bool {

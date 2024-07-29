@@ -55,7 +55,6 @@ jobs:
                 - "8.3"
                 dependencies:
                 - "lowest"
-                - "locked"
                 - "highest"
         runs-on: "ubuntu-22.04"
         timeout-minutes: 5

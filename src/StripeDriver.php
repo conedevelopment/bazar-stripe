@@ -28,11 +28,6 @@ class StripeDriver extends Driver
     public readonly StripeClient $client;
 
     /**
-     * The Stripe session instance.
-     */
-    protected ?Session $session = null;
-
-    /**
      * Create a new driver instance.
      */
     public function __construct(array $config = [])
@@ -90,23 +85,13 @@ class StripeDriver extends Driver
     /**
      * {@inheritdoc}
      */
-    public function checkout(Request $request, Order $order): Order
-    {
-        $this->session = $this->createSession($order);
-
-        return parent::checkout($request, $order);
-    }
-
-    /**
-     * {@inheritdoc}
-     */
     public function handleCheckout(Request $request, Order $order): Response
     {
+        $session = $this->createSession($order);
+
         $response = parent::handleCheckout($request, $order);
 
-        if (! is_null($this->session)) {
-            $response->url($this->session->url);
-        }
+        $response->url($session->url);
 
         return $response;
     }
@@ -116,12 +101,12 @@ class StripeDriver extends Driver
      */
     public function capture(Request $request, Order $order): Order
     {
-        $this->session = $this->client->checkout->sessions->retrieve(
+        $session = $this->client->checkout->sessions->retrieve(
             $request->input('session_id')
         );
 
-        if (! $order->transactions()->where('bazar_transactions.key', $this->session->payment_intent)->exists()) {
-            $this->pay($order, null, ['key' => $this->session->payment_intent]);
+        if (! $order->transactions()->where('bazar_transactions.key', $session->payment_intent)->exists()) {
+            $this->pay($order, null, ['key' => $session->payment_intent]);
         }
 
         return $order;

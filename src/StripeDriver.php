@@ -14,6 +14,7 @@ use Stripe\Checkout\Session;
 use Stripe\Event;
 use Stripe\StripeClient;
 use Stripe\Webhook;
+use Throwable;
 
 class StripeDriver extends Driver
 {
@@ -87,7 +88,11 @@ class StripeDriver extends Driver
      */
     public function handleCheckout(Request $request, Order $order): Response
     {
-        $session = $this->createSession($order);
+        try {
+            $session = $this->createSession($order);
+        } catch (Throwable $exception) {
+            return new Response($this->getFailureUrl($order), $order->toArray());
+        }
 
         $response = parent::handleCheckout($request, $order);
 

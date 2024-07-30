@@ -26,7 +26,7 @@ class StripeDriver extends Driver
     /**
      * The Stripe client instance.
      */
-    public readonly StripeClient $client;
+    protected StripeClient $client;
 
     /**
      * Create a new driver instance.
@@ -120,19 +120,19 @@ class StripeDriver extends Driver
     /**
      * {@inheritdoc}
      */
-    public function handleNotification(Request $request): Response
+    public function handleNotification(Request $request, Order $order): Response
     {
-        $event = $this->resolveEvent($request);
+        $event = $this->resolveEvent($request, $order);
 
-        $this->handleWebhook($event);
+        $this->handleWebhook($event, $order);
 
-        return parent::handleNotification($request);
+        return parent::handleNotification($request, $order);
     }
 
     /**
      * Resolve the Stripe event.
      */
-    protected function resolveEvent(Request $request): Event
+    protected function resolveEvent(Request $request, Order $order): Event
     {
         return Webhook::constructEvent(
             $request->getContent(),
@@ -144,10 +144,8 @@ class StripeDriver extends Driver
     /**
      * Handle the webhook.
      */
-    protected function handleWebhook(Event $event): void
+    protected function handleWebhook(Event $event, Order $order): void
     {
-        $order = $this->resolveOrder($event->data['object']['metadata']['order']);
-
         switch ($event->type) {
             case 'charge.refunded':
                 $this->handleIrn($event, $order);

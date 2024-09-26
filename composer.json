@@ -17,7 +17,7 @@
     ],
     "require": {
         "php": "^8.2 || ^8.3",
-        "conedevelopment/bazar": "dev-master || ^1.0.11",
+        "conedevelopment/bazar": "dev-master || ^1.1.0",
         "stripe/stripe-php": "^15.4"
     },
     "require-dev": {

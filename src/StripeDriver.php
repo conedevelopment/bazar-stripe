@@ -122,7 +122,7 @@ class StripeDriver extends Driver
      */
     public function resolveOrderForNotification(Request $request): Order
     {
-        return $this->resolveOrder($request->input('object.metadata.order'));
+        return $this->resolveOrder($request->input('data.object.metadata.order'));
     }
 
     /**

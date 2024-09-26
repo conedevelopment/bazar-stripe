@@ -118,6 +118,14 @@ class StripeDriver extends Driver
     }
 
     /**
+     * Resolve the order model for notification.
+     */
+    public function resolveOrderForNotification(Request $request): Order
+    {
+        return $this->resolveOrder($request->input('object.metadata.order'));
+    }
+
+    /**
      * {@inheritdoc}
      */
     public function handleNotification(Request $request, Order $order): Response

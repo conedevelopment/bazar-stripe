@@ -67,7 +67,7 @@ class StripeDriver extends Driver
                     'price_data' => [
                         'currency' => strtolower($order->getCurrency()),
                         'product_data' => ['name' => $item->getName()],
-                        'unit_amount' => $item->getPrice() * 100,
+                        'unit_amount' => $item->getGrossPrice() * 100,
                     ],
                     'quantity' => $item->getQuantity(),
                 ];

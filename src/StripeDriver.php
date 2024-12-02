@@ -75,7 +75,6 @@ class StripeDriver extends Driver
             'mode' => 'payment',
             'success_url' => $this->getCaptureUrl($order),
             'cancel_url' => $this->getFailureUrl($order),
-            'return_url' => $this->getFailureUrl($order),
             'payment_intent_data' => [
                 'metadata' => [
                     'order' => $order->uuid,

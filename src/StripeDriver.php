@@ -91,6 +91,7 @@ class StripeDriver extends Driver
         try {
             $session = $this->createSession($order);
         } catch (Throwable $exception) {
+            report($exception);
             return new Response($this->getFailureUrl($order), $order->toArray());
         }
 

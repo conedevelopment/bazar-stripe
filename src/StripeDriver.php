@@ -217,14 +217,16 @@ class StripeDriver extends Driver
      */
     public function handleIpn(Event $event, Order $order): void
     {
+        $payment = $event->data['object'];
+
         $transaction = Transaction::proxy()
             ->newQuery()
-            ->where('key', $event->data['object']['id'])
-            ->firstOr(function () use ($order, $event): Transaction {
+            ->where('key', $payment['id'])
+            ->firstOr(function () use ($order, $payment): Transaction {
                 return $this->pay(
                     $order,
-                    $event->data['object']['amount'] / 100,
-                    ['key' => $event->data['object']['id']]
+                    $payment['amount'] / 100,
+                    ['key' => $payment['id']]
                 );
             });
 
@@ -236,21 +238,21 @@ class StripeDriver extends Driver
      */
     public function handleIrn(Event $event, Order $order): void
     {
-        foreach ($event->data['object']['refunds']['data'] as $refund) {
-            $transaction = $order->refunds->first(
-                static function (Transaction $transaction) use ($refund): bool {
-                    return $transaction->key === $refund['id'];
-                },
-                function () use ($order, $refund): Transaction {
-                    return $this->refund(
-                        $order,
-                        $refund['amount'] / 100,
-                        ['key' => $refund['id']]
-                    );
-                }
-            );
+        $refund = $event->data['object'];
 
-            $transaction->markAsCompleted();
-        }
+        $transaction = $order->refunds->first(
+            static function (Transaction $transaction) use ($refund): bool {
+                return $transaction->key === $refund['id'];
+            },
+            function () use ($order, $refund): Transaction {
+                return $this->refund(
+                    $order,
+                    $refund['amount'] / 100,
+                    ['key' => $refund['id']]
+                );
+            }
+        );
+
+        $transaction->markAsCompleted();
     }
 }

@@ -19,14 +19,14 @@ concurrency:
 jobs:
     syntax_errors:
         name: "1️⃣ Syntax errors"
-        runs-on: "ubuntu-22.04"
+        runs-on: "ubuntu-24.04"
         timeout-minutes: 5
         steps:
         -
             name: "Set up PHP"
             uses: "shivammathur/setup-php@v2"
             with:
-                php-version: "8.2"
+                php-version: "8.4"
                 extensions: "dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, gd, fileinfo, exif"
                 coverage: "none"
                 tools: "parallel-lint"
@@ -51,12 +51,12 @@ jobs:
             fail-fast: false
             matrix:
                 php-version:
-                - "8.2"
+                - "8.4"
                 - "8.3"
                 dependencies:
                 - "lowest"
                 - "highest"
-        runs-on: "ubuntu-22.04"
+        runs-on: "ubuntu-24.04"
         timeout-minutes: 5
         steps:
         -
@@ -91,7 +91,7 @@ jobs:
             name: "Send coverage to Coveralls"
             env:
                 COVERALLS_REPO_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-            if: "${{ env.COVERALLS_REPO_TOKEN && matrix.php-version == '8.2' && matrix.dependencies == 'locked' }}"
+            if: "${{ env.COVERALLS_REPO_TOKEN && matrix.php-version == '8.4' && matrix.dependencies == 'locked' }}"
             run: |
                 wget --no-verbose \
                     "https://github.com/php-coveralls/php-coveralls/releases/download/v2.5.3/php-coveralls.phar"
@@ -101,14 +101,14 @@ jobs:
         name: "3️⃣ Static Analysis"
         needs:
         - "syntax_errors"
-        runs-on: "ubuntu-22.04"
+        runs-on: "ubuntu-24.04"
         timeout-minutes: 5
         steps:
         -
             name: "Set up PHP"
             uses: "shivammathur/setup-php@v2"
             with:
-                php-version: "8.2"
+                php-version: "8.4"
                 extensions: "dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, gd, fileinfo, exif"
                 coverage: "none"
         -
@@ -147,14 +147,14 @@ jobs:
         name: "4️⃣ Coding Standards"
         needs:
         - "syntax_errors"
-        runs-on: "ubuntu-22.04"
+        runs-on: "ubuntu-24.04"
         timeout-minutes: 5
         steps:
         -
             name: "Set up PHP"
             uses: "shivammathur/setup-php@v2"
             with:
-                php-version: "8.2"
+                php-version: "8.4"
                 extensions: "dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, gd, fileinfo, exif"
                 coverage: "none"
                 tools: "phpcs,cs2pr"

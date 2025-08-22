@@ -32,9 +32,7 @@
     "prefer-stable": true,
     "autoload": {
         "psr-4": {
-            "Cone\\Bazar\\Stripe\\": "src/",
-            "Cone\\Bazar\\Stripe\\Database\\Seeders\\": "database/seeders/",
-            "Cone\\Bazar\\Stripe\\Database\\Factories\\": "database/factories/"
+            "Cone\\Bazar\\Stripe\\": "src/"
         }
     },
     "autoload-dev": {

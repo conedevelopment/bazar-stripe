@@ -1,0 +1,10 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+parameters:
+    databaseMigrationsPath:
+        - vendor/conedevelopment/bazar/database/migrations/
+        - vendor/orchestra/testbench-core/laravel/migrations/
+    paths:
+        - src/
+    level: 5
+    checkMissingIterableValueType: false

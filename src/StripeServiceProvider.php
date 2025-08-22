@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Cone\Bazar\Stripe;
 
 use Cone\Bazar\Support\Facades\Gateway;
@@ -16,15 +18,5 @@ class StripeServiceProvider extends ServiceProvider
         Gateway::extend('stripe', static function (Application $app): StripeDriver {
             return new StripeDriver($app['config']->get('bazar.gateway.drivers.stripe', []));
         });
-    }
-
-    /**
-     * Bootstrap any application services.
-     */
-    public function boot(): void
-    {
-        $this->app['events']->listen(
-            Events\StripeWebhookInvoked::class, Listeners\HandleStripeWebhook::class
-        );
     }
 }

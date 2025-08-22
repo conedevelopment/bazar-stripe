@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Cone\Bazar\Stripe;
 
 use Cone\Bazar\Exceptions\TransactionDriverMismatchException;
@@ -10,10 +12,11 @@ use Cone\Bazar\Models\Order;
 use Cone\Bazar\Models\Transaction;
 use Cone\Bazar\Stripe\Events\StripeWebhookInvoked;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\URL;
 use Stripe\Checkout\Session;
+use Stripe\Event;
 use Stripe\StripeClient;
 use Stripe\Webhook;
+use Throwable;
 
 class StripeDriver extends Driver
 {
@@ -25,12 +28,7 @@ class StripeDriver extends Driver
     /**
      * The Stripe client instance.
      */
-    public readonly StripeClient $client;
-
-    /**
-     * The Stripe session instance.
-     */
-    protected ?Session $session = null;
+    protected StripeClient $client;
 
     /**
      * Create a new driver instance.
@@ -55,9 +53,7 @@ class StripeDriver extends Driver
      */
     public function getCaptureUrl(Order $order): string
     {
-        return URL::route('bazar.gateway.capture', [
-            'driver' => $this->name,
-        ]).'?session_id={CHECKOUT_SESSION_ID}';
+        return parent::getCaptureUrl($order).'&session_id={CHECKOUT_SESSION_ID}';
     }
 
     /**
@@ -73,7 +69,7 @@ class StripeDriver extends Driver
                     'price_data' => [
                         'currency' => strtolower($order->getCurrency()),
                         'product_data' => ['name' => $item->getName()],
-                        'unit_amount' => $item->getPrice() * 100,
+                        'unit_amount' => $item->getGrossPrice() * 100,
                     ],
                     'quantity' => $item->getQuantity(),
                 ];
@@ -92,23 +88,17 @@ class StripeDriver extends Driver
     /**
      * {@inheritdoc}
      */
-    public function checkout(Request $request, Order $order): Order
-    {
-        $this->session = $this->createSession($order);
-
-        return parent::checkout($request, $order);
-    }
-
-    /**
-     * {@inheritdoc}
-     */
     public function handleCheckout(Request $request, Order $order): Response
     {
+        try {
+            $session = $this->createSession($order);
+        } catch (Throwable $exception) {
+            return new Response($this->getFailureUrl($order), $order->toArray());
+        }
+
         $response = parent::handleCheckout($request, $order);
 
-        if (! is_null($this->session)) {
-            $response->url($this->session->url);
-        }
+        $response->url($session->url);
 
         return $response;
     }
@@ -116,41 +106,66 @@ class StripeDriver extends Driver
     /**
      * {@inheritdoc}
      */
-    public function resolveOrderForCapture(Request $request): Order
+    public function capture(Request $request, Order $order): Order
     {
-        $this->session = $this->client->checkout->sessions->retrieve(
+        $session = $this->client->checkout->sessions->retrieve(
             $request->input('session_id')
         );
 
-        return Order::proxy()->newQuery()->where('bazar_orders.uuid', $this->session->client_reference_id)->firstOrFail();
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function capture(Request $request, Order $order): Order
-    {
-        if (! $order->transactions()->where('bazar_transactions.key', $this->session->payment_intent)->exists()) {
-            $this->pay($order, null, ['key' => $this->session->payment_intent]);
+        if (! $order->transactions()->where('bazar_transactions.key', $session->payment_intent)->exists()) {
+            $this->pay($order, null, ['key' => $session->payment_intent]);
         }
 
         return $order;
     }
 
     /**
+     * Resolve the order model for notification.
+     */
+    public function resolveOrderForNotification(Request $request): Order
+    {
+        return $this->resolveOrder($request->input('data.object.metadata.order'));
+    }
+
+    /**
      * {@inheritdoc}
      */
-    public function handleNotification(Request $request): Response
+    public function handleNotification(Request $request, Order $order): Response
     {
-        $event = Webhook::constructEvent(
+        $event = $this->resolveEvent($request, $order);
+
+        $this->handleWebhook($event, $order);
+
+        return parent::handleNotification($request, $order);
+    }
+
+    /**
+     * Resolve the Stripe event.
+     */
+    protected function resolveEvent(Request $request, Order $order): Event
+    {
+        return Webhook::constructEvent(
             $request->getContent(),
             $request->server('HTTP_STRIPE_SIGNATURE'),
             $this->config['secret']
         );
+    }
+
+    /**
+     * Handle the webhook.
+     */
+    protected function handleWebhook(Event $event, Order $order): void
+    {
+        switch ($event->type) {
+            case 'charge.refunded':
+                $this->handleIrn($event, $order);
+                break;
+            case 'payment_intent.succeeded':
+                $this->handleIpn($event, $order);
+                break;
+        }
 
         StripeWebhookInvoked::dispatch($event);
-
-        return parent::handleNotification($request);
     }
 
     /**
@@ -196,6 +211,50 @@ class StripeDriver extends Driver
             ],
         ]);
 
-        $transaction->setAttribute('key', $refund->id)->markAsCompleted();
+        $transaction->setAttribute('key', $refund->id)->save();
+    }
+
+    /**
+     * Handle the payment.
+     */
+    public function handleIpn(Event $event, Order $order): void
+    {
+        $payment = $event->data['object'];
+
+        $transaction = Transaction::proxy()
+            ->newQuery()
+            ->where('key', $payment['id'])
+            ->firstOr(function () use ($order, $payment): Transaction {
+                return $this->pay(
+                    $order,
+                    $payment['amount'] / 100,
+                    ['key' => $payment['id']]
+                );
+            });
+
+        $transaction->markAsCompleted();
+    }
+
+    /**
+     * Handle the refund.
+     */
+    public function handleIrn(Event $event, Order $order): void
+    {
+        $refund = $event->data['object'];
+
+        $transaction = $order->refunds->first(
+            static function (Transaction $transaction) use ($refund): bool {
+                return $transaction->key === $refund['id'];
+            },
+            function () use ($order, $refund): Transaction {
+                return $this->refund(
+                    $order,
+                    $refund['amount'] / 100,
+                    ['key' => $refund['id']]
+                );
+            }
+        );
+
+        $transaction->markAsCompleted();
     }
 }

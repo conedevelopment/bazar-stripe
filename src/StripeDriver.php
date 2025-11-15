@@ -186,7 +186,7 @@ class StripeDriver extends Driver
     }
 
     /**
-     * Handle the manual payment creatiion.
+     * Handle the manual payment creation.
      */
     public function handleManualPayment(Transaction $transaction): void
     {
@@ -194,7 +194,7 @@ class StripeDriver extends Driver
     }
 
     /**
-     * Handle the manual refund creatiion.
+     * Handle the manual refund creation.
      */
     public function handleManualRefund(Transaction $transaction): void
     {

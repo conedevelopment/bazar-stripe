@@ -124,12 +124,9 @@ class StripeDriver extends Driver
      */
     public function resolveOrderForNotification(Request $request): Order
     {
-        return match ($request->input('type')) {
-            'refund.created' => Order::proxy()
-                ->whereRelation('transactions', 'transaction_id', $request->input('data.object.payment_intent'))
-                ->firstOrFail(),
-            default => $this->resolveOrder($request->input('data.object.metadata.order')),
-        };
+        return Order::proxy()
+            ->whereRelation('transactions', 'transaction_id', $request->input('data.object.payment_intent'))
+            ->firstOrFail();
     }
 
     /**

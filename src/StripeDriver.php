@@ -11,6 +11,7 @@ use Cone\Bazar\Interfaces\LineItem;
 use Cone\Bazar\Models\Order;
 use Cone\Bazar\Models\Transaction;
 use Cone\Bazar\Stripe\Events\StripeWebhookInvoked;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Stripe\Checkout\Session;
 use Stripe\Event;
@@ -124,9 +125,13 @@ class StripeDriver extends Driver
      */
     public function resolveOrderForNotification(Request $request): Order
     {
-        return Order::proxy()
-            ->whereRelation('transactions', 'transaction_id', $request->input('data.object.payment_intent'))
-            ->firstOrFail();
+        return match (true) {
+            $request->has('data.object.metadata.order') => $this->resolveOrder($request->input('data.object.metadata.order')),
+            $request->has('data.object.payment_intent') => Order::proxy()
+                ->whereRelation('transactions', 'key', $request->input('data.object.payment_intent'))
+                ->firstOrFail(),
+            default => throw new ModelNotFoundException,
+        };
     }
 
     /**

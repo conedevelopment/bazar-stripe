@@ -65,16 +65,21 @@ class StripeDriver extends Driver
         return $this->client->checkout->sessions->create([
             'client_reference_id' => $order->uuid,
             'customer_email' => $order->user->email,
-            'line_items' => $order->items->map(static function (LineItem $item) use ($order): array {
-                return [
+            'line_items' => [
+                [
                     'price_data' => [
-                        'currency' => strtolower($order->getCurrency()),
-                        'product_data' => ['name' => $item->getName()],
-                        'unit_amount' => $item->getGrossPrice() * 100,
+                        'currency' => $order->getCurrency()->key(),
+                        'product_data' => [
+                            'name' => $order->getLabel(),
+                            'description' => $order->items->map(static function (LineItem $item): string {
+                                return sprintf('%s x%d', $item->getName(), $item->getQuantity());
+                            })->implode(', '),
+                        ],
+                        'unit_amount' => $order->getTotal() * 100,
                     ],
-                    'quantity' => $item->getQuantity(),
-                ];
-            })->toArray(),
+                    'quantity' => 1,
+                ],
+            ],
             'mode' => 'payment',
             'success_url' => $this->getCaptureUrl($order),
             'cancel_url' => $this->getFailureUrl($order),

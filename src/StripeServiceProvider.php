@@ -15,7 +15,7 @@ class StripeServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        Gateway::extend('stripe', static function (Application $app): StripeDriver {
+        Gateway::extend('stripe', function (Application $app): StripeDriver {
             return new StripeDriver($app['config']->get('bazar.gateway.drivers.stripe', []));
         });
     }
